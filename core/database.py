@@ -1,0 +1,52 @@
+import logging
+from sqlalchemy import (
+    create_engine, 
+    text,
+    URL
+)
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+settings = get_settings()
+
+DATABASE_URL = URL.create(
+    drivername="postgresql+psycopg",
+    username=settings.database.user,
+    password=settings.database.password,
+    host=settings.database.host,
+    port=settings.database.port,
+    database=settings.database.database
+)
+engine = create_engine(DATABASE_URL)
+
+SESSION_LOCAL = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+class Base(DeclarativeBase):
+    pass
+
+
+def check_database_connection() -> bool:
+    is_connected = False
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        is_connected = True
+    except SQLAlchemyError:
+        logger.error("Database connection failed")
+        is_connected = False
+
+    return is_connected
+
+
+def get_database():
+    db = SESSION_LOCAL()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# def init_db():
