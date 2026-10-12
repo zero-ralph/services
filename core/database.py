@@ -1,10 +1,10 @@
 import logging
 from sqlalchemy import (
-    create_engine, 
     text,
     URL
 )
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from core.config import get_settings
 
@@ -13,16 +13,21 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 DATABASE_URL = URL.create(
-    drivername="postgresql+psycopg",
+    drivername="postgresql+asyncpg",
     username=settings.database.user,
     password=settings.database.password,
     host=settings.database.host,
     port=settings.database.port,
     database=settings.database.database
 )
-engine = create_engine(DATABASE_URL)
+engine = create_async_engine(DATABASE_URL)
 
-SESSION_LOCAL = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+SESSION_LOCAL = async_sessionmaker(
+    bind=engine, 
+    class_=AsyncSession, 
+    autoflush=False, 
+    expire_on_commit=False
+)
 
 class Base(DeclarativeBase):
     pass
@@ -47,6 +52,3 @@ def get_database():
         yield db
     finally:
         db.close()
-
-
-# def init_db():
