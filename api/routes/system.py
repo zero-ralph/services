@@ -10,8 +10,8 @@ def healthz() -> dict[str, str]:
 
 
 @router.get("/healthz/db", tags={"healthz"})
-def healthz_db() -> dict[str, str]:
+async def healthz_db() -> dict[str, str]:
     is_running = "is not connected"
-    if check_database_connection():
+    if await check_database_connection():
         is_running = "is running"
     return {'database': is_running}

@@ -6,6 +6,7 @@ from sqlalchemy import (
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.pool import NullPool
 from core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ DATABASE_URL = URL.create(
     port=settings.database.port,
     database=settings.database.database
 )
-engine = create_async_engine(DATABASE_URL)
+engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
 
 SESSION_LOCAL = async_sessionmaker(
     bind=engine, 
@@ -33,11 +34,11 @@ class Base(DeclarativeBase):
     pass
 
 
-def check_database_connection() -> bool:
+async def check_database_connection() -> bool:
     is_connected = False
     try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
+        async with engine.connect() as connection:
+            await connection.execute(text("SELECT 1"))
         is_connected = True
     except SQLAlchemyError:
         logger.error("Database connection failed")
@@ -46,9 +47,7 @@ def check_database_connection() -> bool:
     return is_connected
 
 
-def get_database():
-    db = SESSION_LOCAL()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_database():
+    async with SESSION_LOCAL() as session:
+        yield session
+    

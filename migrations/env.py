@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
+from sqlalchemy.engine import Connection 
 
 from alembic import context
 
@@ -53,6 +53,16 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+def do_run_migrations(connection: Connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata)
+    with context.begin_transaction():
+        context.run_migrations()
+
+async def run_async_migrations() -> None:
+    async with engine.connect() as connection:
+        await connection.run_sync(do_run_migrations)
+    await engine.dispose()
+    
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.

@@ -1,29 +1,12 @@
-import unittest
 from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from core.database import Base, engine
 from models.expense import Expense
+from tests.base import DatabaseTestCase
 
-
-class TestExpenseModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        Base.metadata.create_all(engine)
-
-    def setUp(self):
-        self.connection = engine.connect()
-        self.transaction = self.connection.begin()
-        self.session = Session(
-            bind=self.connection, join_transaction_mode="create_savepoint"
-        )
-    
-    def tearDown(self):
-        self.session.close()
-        self.transaction.rollback() # This will remove any created data for testing purposes
-        # self.transaction.commit() # This will add the create data for checking purposes
-        self.connection.close()
+class TestExpenseModel(DatabaseTestCase):
 
     def expense_object(self, exclude_fields: list = None, **overrides) -> Expense:
         data = {
@@ -37,12 +20,17 @@ class TestExpenseModel(unittest.TestCase):
                 data.pop(field)
 
         return Expense(**data)
-    
-    def test_create_expense(self):
-        self.session.add(self.expense_object())
-        self.session.commit()
 
-        expense = self.session.scalars(select(Expense)).one()
+    async def save_object(self, expense: Expense) -> Expense:
+        self.session.add(expense)
+        await self.session.commit()
+        await self.session.refresh(expense)
+        return expense
+    
+    async def test_create_expense(self):
+        await self.save_object(self.expense_object())
+
+        expense = (await self.session.scalars(select(Expense))).one()
 
         self.assertIsNotNone(expense.id)
         self.assertEqual(expense.vendor, 'Metrobank')
@@ -50,48 +38,42 @@ class TestExpenseModel(unittest.TestCase):
         self.assertIsNotNone(expense.created_at)
 
 
-    def test_create_expense_vendor_is_required(self):
+    async def test_create_expense_vendor_is_required(self):
         expense = self.expense_object(exclude_fields=["vendor"])
         
         self.session.add(expense)
         with self.assertRaises(IntegrityError):
-           self.session.flush()
+           await self.session.flush()
 
-    def test_create_expense_total_amount_is_required(self):
-        expense = self.expense_object(exclude_fields=["vendor"])
+    async def test_create_expense_total_amount_is_required(self):
+        expense = self.expense_object(exclude_fields=["total_amount"])
         
         self.session.add(expense)
         with self.assertRaises(IntegrityError):
-           self.session.flush()
+            await self.session.flush()
 
-    def test_update_expense(self):
-        expense = self.expense_object()
-        self.session.add(expense)
-        self.session.commit()
-
+    async def test_update_expense(self):
+        expense = await self.save_object(self.expense_object())
 
         expense.vendor = "BPI"
-        self.session.commit()
+        await self.session.commit()
 
-        self.session.expire_all()
+        await self.session.refresh(expense)
 
-        updated_expense = self.session.get(Expense, expense.id)
 
-        self.assertEqual(updated_expense.vendor, "BPI")
-        self.assertEqual(updated_expense.total_amount, Decimal("1000.59"))
+        self.assertEqual(expense.vendor, "BPI")
+        self.assertEqual(expense.total_amount, Decimal("1000.59"))
 
-    def test_soft_delete_expense(self):
-        expense = self.expense_object()
-        self.session.add(expense)
-        self.session.commit()
-
+    async def test_soft_delete_expense(self):
+        expense = await self.save_object(self.expense_object())
+        
         expense_id = expense.id
 
         expense.soft_delete()
-        self.session.commit()
+        await self.session.commit()
 
-        self.session.expire_all()
-        self.assertIsNotNone(self.session.get(Expense, expense_id))
+        await self.session.refresh(expense)
+        self.assertIsNotNone(await self.session.get(Expense, expense_id))
 
 
         
