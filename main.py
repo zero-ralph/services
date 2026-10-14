@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.repository.expense import ExpenseRepository
 from api.routes import system
+from api.routes.expense import ExpenseRouter
 from api.service.expense import ExpenseService
  
 from core.config import Settings
@@ -50,6 +51,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(system.router)
+app.include_router(ExpenseRouter(expense_service_dependencies).router)
 # End 
 
 
