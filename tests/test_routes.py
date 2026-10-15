@@ -56,53 +56,54 @@ class TestExpenseRoutes(DatabaseTestCase):
         errors = [(e['loc'], e['type']) for e in response.json()['detail']]
         self.assertIn((["body", "total_amount"], "missing"), errors)
 
-    # async def test_get_all(self):
-    #     await self.create_expense(vendor="BPI")
-    #     await self.create_expense()
+    async def test_get_all(self):        
+        await self.create_expense(vendor="BPI")
+        await self.create_expense(vendor="Metrobank")
 
-    #     response = await self.client.get('/expense')
+        response = await self.client.get('/expense')
 
-    #     self.assertEqual(response.status, status.HTTP_200_OK)
-    #     self.assertEqual([e["vendor"] for e in response.json()], ["BPI", "Metrobank"])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([e["vendor"] for e in response.json()], ["BPI", "Metrobank"])
 
-    # async def test_get_by_valid_id(self):
-    #     created = await self.create_expense()
+    async def test_get_by_valid_id(self):
+        created = await self.create_expense()
 
-    #     response = await self.client.get(f"/expense/{created['id']}")
+        response = await self.client.get(f"/expense/{created['id']}")
 
-    #     self.assertEqual(response.json(), status.HTTP_200_OK)
-    #     self.assertEqual(response.json()['id'], created['id'])
-    #     self.assertEqual(response.json()['vendor'], created['vendor'])
-
-    # async def test_get_by_invalid_id(self):
-    #     created = await self.create_expense()
-
-    #     response = await self.client.get('/expense/999999')
-    #     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-    # async def test_update(self):
-    #     created = await self.create_expense()
-
-    #     self.payload['vendor'] = "BPI"
-    #     response = await self.client.put(f'/expense/{created['id']}', json=self.payload)
-
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.json()['vendor'], "BPI")
-
-    # async def test_update_invalid_id(self):
-    #     create = await self.create_expense()
-
-    #     response = await self.client.put(f'/expense/999999', json=self.payload)
-    #     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-    
-    # async def test_delete(self):
-    #     created = await self.create_expense()
-
-    #     response = await self.client.delete(f"/expense/{created['id']}")
-
-    #     self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-    #     response = await self.client.get(f"/expense/{created['id']}")
-    #     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['vendor'], created['vendor'])
 
     
+    async def test_get_by_invalid_id(self):
+        created = await self.create_expense()
+
+        response = await self.client.get('/expense/999999')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    async def test_update(self):
+        created = await self.create_expense()
+
+        self.payload['vendor'] = "BPI"
+        response = await self.client.put(f'/expense/{created['id']}', json=self.payload)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['vendor'], "BPI")
+
+    async def test_update_invalid_id(self):
+        create = await self.create_expense()
+
+        response = await self.client.put(f'/expense/999999', json=self.payload)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    async def test_delete(self):
+        created = await self.create_expense()
+
+        response = await self.client.delete(f"/expense/{created['id']}")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    async def test_delete_invalid_id(self):
+        response = await self.client.delete(f"/expense/999999")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json()['detail'], f"Expense 999999 not found.")

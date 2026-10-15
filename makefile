@@ -14,7 +14,7 @@ migrate_in_test:
 	CONFIG_FILE=config.test.toml $(ALEMBIC_MIGRATE)
 
 run_tests:
-	uv run pytest -v
+	uv run pytest -v -s
 
 run_server:
 	uvicorn main:app --reload
