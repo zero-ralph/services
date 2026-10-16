@@ -1,0 +1,11 @@
+[app]
+title=string
+version=string
+description=string
+
+[database]
+host=string
+port=int
+user=string
+password=string
+database=string

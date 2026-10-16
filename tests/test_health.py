@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import AsyncMock, patch
 from httpx import ASGITransport, AsyncClient
 from fastapi import status
 from fastapi.testclient import TestClient
@@ -27,3 +28,9 @@ class TestHealth(unittest.IsolatedAsyncioTestCase):
     async def test_if_app_can_connect_to_database(self):
         self.assertTrue(await check_database_connection())
 
+    async def test_database_down_returns_503(self):
+        with patch("api.routes.system.check_database_connection", AsyncMock(return_value=False)):
+            response = await self.client.get("/system/healthz/db")
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.json(), {"database": "is not running"})

@@ -21,7 +21,12 @@ DATABASE_URL = URL.create(
     port=settings.database.port,
     database=settings.database.database
 )
-engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
+
+engine = create_async_engine(
+    DATABASE_URL, 
+    pool_pre_ping=True,
+    **({} if settings.database.use_pool else {"poolclass": NullPool}),
+)
 
 SESSION_LOCAL = async_sessionmaker(
     bind=engine, 

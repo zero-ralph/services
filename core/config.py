@@ -21,6 +21,7 @@ class DatabaseSettings(BaseModel):
     user: str
     password: str
     database: str
+    use_pool: bool = True
 
 
 class Settings(BaseSettings):

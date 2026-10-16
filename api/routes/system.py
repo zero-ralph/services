@@ -1,17 +1,18 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
 from core.database import check_database_connection
 
+class SystemRouter:
+    def __init__(self):
+        self.router = APIRouter(prefix="/system", tags=["system"])
+    
+        @self.router.get("/healthz", tags=["system"])
+        async def healthz() -> dict[str, str]:
+            return {"system": "online"}
 
-router = APIRouter(prefix="/system", tags=["system"])
-
-@router.get("/healthz", tags=["healthz"])
-def healthz() -> dict[str, str]:
-    return {"system": "online"}
-
-
-@router.get("/healthz/db", tags={"healthz"})
-async def healthz_db() -> dict[str, str]:
-    is_running = "is not connected"
-    if await check_database_connection():
-        is_running = "is running"
-    return {'database': is_running}
+        @self.router.get("/healthz/db", tags=["system"])
+        async def healthz_db(response: Response) -> dict[str, str]:
+            if await check_database_connection():
+                return {"database": "is running"}
+        
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            return {'database': "is not running"}
