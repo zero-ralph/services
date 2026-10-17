@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from tests.base import DatabaseTestCase
 from api.repository.expense import ExpenseRepository

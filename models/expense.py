@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
+
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -8,9 +12,12 @@ from sqlalchemy import (
     func,
     false
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
+
+if TYPE_CHECKING:
+    from models.expense_item import ExpenseItem
 
 
 class Expense(Base):
@@ -27,6 +34,12 @@ class Expense(Base):
     )
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
+    )
+    items: Mapped[list[ExpenseItem]] = relationship(
+        back_populates="expense",
+        cascade="all, delete-orphan",
+        lazy="raise",
+        order_by="ExpenseItem.id"
     )
 
 

@@ -1,9 +1,10 @@
 from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from core.database import Base, engine
 from models.expense import Expense
+from models.expense_item import ExpenseItem
 from tests.base import DatabaseTestCase
 
 class TestExpenseModel(DatabaseTestCase):
@@ -75,5 +76,32 @@ class TestExpenseModel(DatabaseTestCase):
         await self.session.refresh(expense)
         self.assertIsNotNone(await self.session.get(Expense, expense_id))
 
+
+
+
+class TestExpenseItemModel(DatabaseTestCase):
+
+    async def save(self, obj):
+        self.session.add(obj)
+        await self.session.commit()
+        return obj
+
+    async def load_expense(self, expense_id: int) -> Expense:
+        self.session.expunge_all()
+        return (await self.session.scalars(
+            select(Expense).where(Expense.id == expense_id).options(selectinload(Expense.items))
+        )).one()
+
+    async def test_expense_with_items(self):
+        expense = Expense(vendor="Metrobank", total_amount=Decimal("10.00"), items=[
+            ExpenseItem(amount=Decimal("1.00"))
+        ])
+
+        await self.save(expense)
+
+        loaded = await self.load_expense(expense.id)
+
+        self.assertEqual([i.amount for i in loaded.items], [Decimal("1.00")])
+        self.assertEqual(loaded.items[0].amount, Decimal("1.00"))
 
         
