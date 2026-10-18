@@ -17,7 +17,8 @@ class TestExpenseRoutes(DatabaseTestCase):
         )
         self.payload = {
             'vendor': 'Metrobank',
-            'total_amount': "2000"
+            'total_amount': "2000",
+            'duration': 6
         }
 
     async def asyncTearDown(self):

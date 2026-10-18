@@ -12,7 +12,8 @@ class TestExpenseModel(DatabaseTestCase):
     def expense_object(self, exclude_fields: list = None, **overrides) -> Expense:
         data = {
             'vendor': 'Metrobank',
-            'total_amount': Decimal("1000.59")
+            'total_amount': Decimal("1000.59"),
+            'duration': 6
         }
         data.update(overrides)
 

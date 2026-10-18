@@ -3,7 +3,14 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pydantic import ValidationError
 from models.expense import Expense
-from schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseRead
+from models.expense_item import ExpenseItem
+from schemas.expense import (
+    ExpenseCreate, 
+    ExpenseUpdate, 
+    ExpenseRead,
+    ExpenseItemRead,
+    ExpenseItemUpdate
+) 
 
 
 class SchemaTestCase(unittest.TestCase):
@@ -25,7 +32,8 @@ class TestExpenseCreate(SchemaTestCase):
     def valid_data(self, **overrides) -> dict:
         data = {
             "vendor": "Metrobank", 
-            "total_amount": "1000.50"
+            "total_amount": "1000.50",
+            "duration": 6
         }
         data.update(overrides)
         return data
@@ -39,6 +47,17 @@ class TestExpenseCreate(SchemaTestCase):
         data = self.valid_data()
         data.pop("vendor")
         self.assertValidationError(ExpenseCreate, data, "vendor", "missing")
+
+    def test_duration_is_required(self):
+        data = self.valid_data()
+        data.pop('duration')
+        self.assertValidationError(ExpenseCreate, data, "duration", "missing")
+
+    def test_duration_must_be_atleast_one(self):
+        self.assertValidationError(ExpenseCreate, self.valid_data(duration=0), 'duration', 'greater_than_equal')
+
+    def test_duration_must_be_a_whole_number(self):
+        self.assertValidationError(ExpenseCreate, self.valid_data(duration=1.5), 'duration', 'int_from_float')
  
     def test_vendor_cannot_be_empty(self):
         self.assertValidationError(ExpenseCreate, self.valid_data(vendor=""), "vendor", "string_too_short")
@@ -59,7 +78,7 @@ class TestExpenseCreate(SchemaTestCase):
 
 class TestExpenseUpdate(SchemaTestCase):
 
-    def test_is_completed_is_required(self):
+    def test_is_completed_defaults_to_false(self):
         expense = ExpenseUpdate()
         self.assertEqual(expense.model_dump(), {'is_completed': False})
 
@@ -84,3 +103,26 @@ class TestExpenseRead(SchemaTestCase):
         self.assertEqual(read.is_completed, False)
         self.assertIsNotNone(read.created_at)
         self.assertIsNone(read.updated_at)
+
+
+class TestExpenseItemRead(SchemaTestCase):
+
+    def test_from_orm_object(self):
+        item = ExpenseItem(id=1, amount=Decimal("1.67"), is_paid=False)
+
+        read = ExpenseItemRead.model_validate(item)
+
+        self.assertEqual(read.id, 1)
+        self.assertEqual(read.amount, Decimal("1.67"))
+        self.assertFalse(read.is_paid)
+
+class TestExpenseItemUpdate(SchemaTestCase):
+
+    def test_valid(self):
+        self.assertTrue(ExpenseItemUpdate(is_paid=True).is_paid)
+
+    def test_is_paid_is_required(self):
+        self.assertValidationError(ExpenseItemUpdate, {}, "is_paid", "missing")
+
+    def test_is_paid_must_be_a_bool(self):
+        self.assertValidationError(ExpenseItemUpdate, {'is_paid': 2}, 'is_paid', 'bool_parsing')

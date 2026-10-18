@@ -10,7 +10,8 @@ from sqlalchemy import (
     Numeric,
     String,
     func,
-    false
+    false,
+    Integer
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,6 +26,7 @@ class Expense(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     vendor: Mapped[str] = mapped_column(String(100))
     total_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2)) 
+    duration: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

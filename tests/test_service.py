@@ -17,7 +17,7 @@ class TestExpenseService(unittest.IsolatedAsyncioTestCase):
         self.service = ExpenseService(self.repository, logging.getLogger("test"))
 
     async def test_create(self):
-        data = ExpenseCreate(vendor="Metrobank", total_amount=Decimal("10.00"))
+        data = ExpenseCreate(vendor="Metrobank", total_amount=Decimal("10.00"), duration=6)
 
         created = await self.service.create(data)
 
@@ -26,6 +26,7 @@ class TestExpenseService(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(sent, Expense)
         self.assertEqual(sent.vendor, "Metrobank")
         self.assertEqual(sent.total_amount, Decimal("10.00"))
+        self.assertEqual(sent.duration, 6)
 
         self.assertIs(created, sent)
 
@@ -54,11 +55,11 @@ class TestExpenseService(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(expense.is_completed)
 
     async def test_update(self):
-        expense = Expense(id=1, vendor="Metrobank", total_amount=Decimal('10.00'))
+        expense = Expense(id=1, vendor="Metrobank", total_amount=Decimal('10.00'), duration=6)
         self.repository.get_by_id.return_value = expense
         self.repository.update.side_effect = lambda e: e
 
-        data = ExpenseCreate(id=1, vendor="BPI", total_amount=Decimal("10.00"))
+        data = ExpenseCreate(id=1, vendor="BPI", total_amount=Decimal("10.00"), duration=6)
         result = await self.service.update(data=data, expense_id=expense.id)
 
         self.repository.get_by_id.assert_awaited_once_with(1)

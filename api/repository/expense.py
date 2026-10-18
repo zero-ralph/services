@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from models.expense import Expense
 
 
@@ -11,12 +12,13 @@ class ExpenseRepository:
     async def create(self, expense: Expense) -> Expense:
         self.session.add(expense)
         await self.session.commit()
-        await self.session.refresh(expense)
-        return expense
+        return await self.get_by_id(expense.id)
     
     async def get_all(self) -> list[Expense]:
         results = await self.session.scalars(
-            select(Expense).where(Expense.deleted_at.is_(None)).order_by(Expense.created_at.desc())
+            select(Expense).where(Expense.deleted_at.is_(None))
+            .options(selectinload(Expense.items))
+            .order_by(Expense.created_at.desc())
         )
         return list(results)
 
@@ -26,13 +28,14 @@ class ExpenseRepository:
                 Expense.id == expense_id,
                 Expense.deleted_at.is_(None),
             )
+            .options(selectinload(Expense.items))
+            .execution_options(populate_existing=True)
         )
         return result.one_or_none()
 
     async def update(self, expense: Expense) -> Expense:
         await self.session.commit()
-        await self.session.refresh(expense)
-        return expense
+        return await self.get_by_id(expense.id)
 
     async def delete(self, expense: Expense) -> None:
         expense.soft_delete()
