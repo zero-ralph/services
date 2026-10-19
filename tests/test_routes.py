@@ -1,3 +1,4 @@
+from decimal import Decimal
 from fastapi import status
 from httpx import AsyncClient, ASGITransport
 from core.database import get_database
@@ -35,10 +36,14 @@ class TestExpenseRoutes(DatabaseTestCase):
     async def test_create_route(self):
         response = await self.client.post('/expense', json=self.payload)
 
+
+        print(response.json())
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()['vendor'], "Metrobank")
         self.assertEqual(response.json()['total_amount'], "2000.00")
         self.assertFalse(response.json()['is_completed'])
+        self.assertEqual(response.json()['duration'], 6)
+        self.assertEqual(len(response.json()['items']), 6)
 
 
     async def test_create_missing_payload_vendor(self):
@@ -73,6 +78,7 @@ class TestExpenseRoutes(DatabaseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()['vendor'], created['vendor'])
+        self.assertEqual(response.json()['items'], created['items'])
 
     
     async def test_get_by_invalid_id(self):
@@ -108,3 +114,32 @@ class TestExpenseRoutes(DatabaseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['detail'], f"Expense 999999 not found.")
+
+    async def test_create_return_split_items(self):
+        created = await self.create_expense(total_amount="10.00", duration=6)
+
+        amounts = [Decimal(item['amount']) for item in created['items']]
+        self.assertEqual(amounts, [Decimal("1.67")] * 4 + [Decimal("1.66")] * 2)
+        self.assertEqual(sum(amounts), Decimal("10.00"))
+        self.assertTrue(all(item['is_paid'] is False for item in created['items']))
+
+    async def test_create_zero_duration(self):
+        response = await self.client.post('/expense', json={**self.payload, 'duration': 0})
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_CONTENT)
+
+    async def test_deleted_not_in_list(self):
+        created = await self.create_expense()
+        await self.client.delete(f"/expense/{created['id']}")
+
+        response = await self.client.get('/expense')
+
+        self.assertNotIn(created['id'], [e['id'] for e in response.json()])
+
+    async def test_delete_twice_returns_404(self):
+        created = await self.create_expense()
+
+        await self.client.delete(f"/expense/{created['id']}")
+        response = await self.client.delete(f"/expense/{created['id']}")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

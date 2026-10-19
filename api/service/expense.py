@@ -1,6 +1,8 @@
+from decimal import Decimal
 from api.repository.expense import ExpenseRepository
 from core.exceptions import ExpenseNotFoundError
 from models.expense import Expense
+from models.expense_item import ExpenseItem
 from schemas.expense import ExpenseCreate
 
 
@@ -9,8 +11,20 @@ class ExpenseService:
         self.repository = repository
         self.logger = logger
 
+    @staticmethod
+    def split_amount(total: Decimal, parts: int) -> list[Decimal]:
+        cents = int(total * 100)
+        base, remainder = divmod(cents, parts)
+        return [Decimal(base + (1 if i < remainder else 0)).scaleb(-2) for i in range(parts)]
+
+
     async def create(self, expense_create_form: ExpenseCreate) -> Expense:
-        return await self.repository.create(Expense(**expense_create_form.model_dump()))
+        expense = Expense(**expense_create_form.model_dump())
+        expense.items = [
+            ExpenseItem(amount=amount)
+            for amount in self.split_amount(expense.total_amount, expense.duration)
+        ]
+        return await self.repository.create(expense)
 
     async def get_all(self) -> list[Expense]:
         return await self.repository.get_all()

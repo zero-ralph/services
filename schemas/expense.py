@@ -32,5 +32,6 @@ class ExpenseRead(ReadModelMixin):
     total_amount: Decimal
     is_completed: bool
     created_at: datetime
-    updated_at: datetime | None 
+    updated_at: datetime | None
+    duration: int 
     items: list[ExpenseItemRead]

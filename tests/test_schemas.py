@@ -91,6 +91,7 @@ class TestExpenseRead(SchemaTestCase):
             vendor="Metrobank",
             total_amount=Decimal("1000.50"),
             is_completed=False,
+            duration=6,
             created_at=datetime(2026, 10, 12, tzinfo=timezone.utc),
             updated_at=None
         )
